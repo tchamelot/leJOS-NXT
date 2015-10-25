@@ -17,8 +17,8 @@ public class Comm extends Thread implements Observable{
 	private InputStream inStream;
 	private DataOutputStream outStream;
 	private NXTConnection conn;
-	private byte[] inputData 	= new byte[3];
-	private byte[] outputData = new byte[5];
+	private byte[] inputData = {0, 0, 0, 0, 0, 0, 0, 0};
+	private byte[] outputData = {0, 0, 0, 0, 0, 0, 0, 0};
 	
 	private ArrayList<Observer> obsList = new ArrayList<Observer>();
 	
@@ -26,7 +26,7 @@ public class Comm extends Thread implements Observable{
 
 	public final static int USB_MODE = 0;
 	public final static int BLUETOOTH_MODE = 1;
-	
+	public final static byte EOC = -1;	
 		
 	public Comm(int mode)  throws NXTCommException {
 		switch(mode){
@@ -49,15 +49,15 @@ public class Comm extends Thread implements Observable{
 		else{
 			LCD.drawString("Creating streams", 0, 1);
 			inStream = conn.openInputStream();
-			inputData[0] = 0;
+			/*inputData[0] = 0;
 			inputData[1] = 0;
-			inputData[2] = 0;
+			inputData[2] = 0;*/
 			outStream = conn.openDataOutputStream();
-			outputData[0] = 0;
+			/*outputData[0] = 0;
 			outputData[1] = 0;
 			outputData[2] = 0;
 			outputData[3] = 0;
-			outputData[4] = 0;
+			outputData[4] = 0;*/
 			
 			if( confirmation() != true){
 				throw new NXTCommException();
@@ -105,6 +105,7 @@ public class Comm extends Thread implements Observable{
 		} 
 		catch (IOException e){
 		}
+		
 	}
 		
 	private void sendData(){
@@ -117,15 +118,36 @@ public class Comm extends Thread implements Observable{
 	}
 
 	public void run(){
-		while(running){
-			this.readData();
-			this.sendData();
-			this.updateObs();
-		}
+		try {
+			while(running){
+				this.readData();
+				isRunning();
+				this.sendData();
+				isRunning();
+				this.updateObs();
+			}
+		} 
+		catch (InterruptedException e) {
+			try {
+				outStream.write(Comm.EOC);
+				inStream.close();
+				outStream.close();
+				Thread.currentThread().interrupt();
+				
+			} 
+			catch (IOException e1) {
+					
+			}
+		}			
 	}
 	
-	public void stop(){
+	public void end(){
 		this.running = false;
+	}
+	
+	private void isRunning() throws InterruptedException{
+		if(this.running == false)
+			throw new InterruptedException();
 	}
 
 	public void addObs(Observer obs) {
@@ -145,5 +167,6 @@ public class Comm extends Thread implements Observable{
 	public void setData(byte[] data){
 		this.outputData = data;
 	}
+
 
 }

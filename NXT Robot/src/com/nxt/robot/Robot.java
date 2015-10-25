@@ -4,6 +4,8 @@ import lejos.nxt.Button;
 import lejos.nxt.Motor;
 import lejos.nxt.SensorPort;
 
+import java.io.IOException;
+
 import com.nxt.comm.*;
 import com.nxt.motor.*;
 import com.nxt.sensor.*;
@@ -39,17 +41,13 @@ public class Robot {
 				report();
 				stop = Button.ESCAPE.isDown();
 			}while(!stop);
-			comm.stop();
+			comm.end();
 		}
 		catch(NXTCommException e){
 			
 		}
 	}
-	
-	public static void main(String[] args) {
-		Robot armRobot = new Robot();
-	}
-	
+		
 	private void report(){
 		for(int idx = 0; idx < motors.length; idx++)
 			outputData[idx] = motors[idx].report();
@@ -74,6 +72,25 @@ public class Robot {
 				motors[idx].stop();
 				break;
 			}
+		}
+	}
+
+	public static void main(String[] args) throws IOException, InterruptedException {
+		test();
+	}
+	
+	public static void test() throws IOException, InterruptedException{
+		Comm comm;
+		try {
+			comm = new Comm(Comm.USB_MODE);
+			comm.start();
+			while(Button.waitForAnyEvent(0) != Button.ID_ESCAPE){
+				
+				}
+			comm.end();
+			comm.join();
+		}
+		catch (NXTCommException e) {
 		}
 	}
 }

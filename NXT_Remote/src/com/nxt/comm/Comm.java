@@ -13,10 +13,14 @@ public class Comm extends Thread implements Observable{
 	private NXTConnector conn;
 	private InputStream 	inStream;
 	private OutputStream 	outStream;
-	private byte[] inputData 	= new byte[5];
-	private byte[] outputData = new byte[3];
+	private byte[] inputData = {0, 0, 0, 0, 0, 0, 0, 0};
+	private byte[] outputData = {0, 0, 0, 0, 0, 0, 0, 0};
 	
 	private ArrayList<Observer> obsList = new ArrayList<Observer>();
+	
+	protected volatile boolean running = true;
+	
+	public final static byte EOC = -1;
 
 
 	public Comm(String URL) throws IOException{
@@ -29,15 +33,15 @@ public class Comm extends Thread implements Observable{
 		
 		System.out.println("Creating Streams...");
 		inStream  = conn.getInputStream();
-		inputData[0] = 0;
+		/*inputData[0] = 0;
 		inputData[1] = 0;
 		inputData[2] = 0;
 		inputData[3] = 0;
-		inputData[4] = 0;
+		inputData[4] = 0;*/
 		outStream = conn.getOutputStream();
-		outputData[0] = 0;
+		/*outputData[0] = 0;
 		outputData[1] = 0;
-		outputData[2] = 0;
+		outputData[2] = 0;*/
 		
 		if(confirmation() != true){
 			throw new IOException();
@@ -76,14 +80,15 @@ public class Comm extends Thread implements Observable{
 		return validation;
 	}
 
-	private void readData(){
-
+	private int readData(){
+		int byteNumber = 0;
 		try{
-			//if(this.inStream.available() == 5)
-				this.inStream.read(inputData);
+				byteNumber = this.inStream.read(inputData);
 		} 
 		catch (IOException e){
 		}
+		System.out.println("Read " + byteNumber + " bytes");
+		return byteNumber;
 	}
 
 	private void sendData(){
@@ -96,11 +101,46 @@ public class Comm extends Thread implements Observable{
 	}
 	
 	public void run(){
-		while(true){
-			this.sendData();
-			this.readData();
-			this.updateObs();
+		try{
+			while(running){
+				long time = System.currentTimeMillis();
+				System.out.println("Send : " + (System.currentTimeMillis() - time));
+				this.sendData();
+				System.out.println("Read : " + (System.currentTimeMillis() - time));
+				isRunning();
+				
+				if(this.readData() == 1)
+					if(inputData[0] == Comm.EOC)
+						this.end();
+				System.out.println("End  : " + (System.currentTimeMillis() - time));
+				isRunning();
+				try {
+					Thread.sleep(10000);
+				} catch (InterruptedException e){
+					e.printStackTrace();
+				}
+				this.updateObs();
+			}
 		}
+		catch(InterruptedException e1){
+			try {
+				Thread.currentThread().interrupt();
+				inStream.close();
+				outStream.close();
+			} 
+			catch (IOException e2) {
+				
+			}
+		}
+	}
+	
+	public void end(){
+		this.running = false;
+	}
+	
+	private void isRunning() throws InterruptedException{
+		if(this.running == false)
+			throw new InterruptedException();
 	}
 
 	public void addObs(Observer obs) {
