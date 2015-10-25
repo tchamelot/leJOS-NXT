@@ -13,14 +13,14 @@ public class Comm extends Thread implements Observable{
 	private NXTConnector conn;
 	private InputStream 	inStream;
 	private OutputStream 	outStream;
-	private byte[] inputData = {0, 0, 0, 0, 0, 0, 0, 0};
-	private byte[] outputData = {0, 0, 0, 0, 0, 0, 0, 0};
+	private byte[] inputData = new byte[5];
+	private byte[] outputData = new byte[3];
 	
 	private ArrayList<Observer> obsList = new ArrayList<Observer>();
 	
 	protected volatile boolean running = true;
 	
-	public final static byte EOC = -1;
+	public final static byte EOC = -128;
 
 
 	public Comm(String URL) throws IOException{
@@ -33,15 +33,15 @@ public class Comm extends Thread implements Observable{
 		
 		System.out.println("Creating Streams...");
 		inStream  = conn.getInputStream();
-		/*inputData[0] = 0;
+		inputData[0] = 0;
 		inputData[1] = 0;
 		inputData[2] = 0;
 		inputData[3] = 0;
-		inputData[4] = 0;*/
+		inputData[4] = 0;
 		outStream = conn.getOutputStream();
-		/*outputData[0] = 0;
+		outputData[0] = 0;
 		outputData[1] = 0;
-		outputData[2] = 0;*/
+		outputData[2] = 0;
 		
 		if(confirmation() != true){
 			throw new IOException();
@@ -114,21 +114,19 @@ public class Comm extends Thread implements Observable{
 						this.end();
 				System.out.println("End  : " + (System.currentTimeMillis() - time));
 				isRunning();
-				try {
-					Thread.sleep(10000);
-				} catch (InterruptedException e){
-					e.printStackTrace();
-				}
 				this.updateObs();
 			}
 		}
-		catch(InterruptedException e1){
+		catch(InterruptedException e){
 			try {
-				Thread.currentThread().interrupt();
+				
+				outStream.write(Comm.EOC);
 				inStream.close();
 				outStream.close();
+				System.out.println("Comm thread ended");
+				Thread.currentThread().interrupt();
 			} 
-			catch (IOException e2) {
+			catch (IOException e1) {
 				
 			}
 		}
@@ -142,6 +140,7 @@ public class Comm extends Thread implements Observable{
 		if(this.running == false)
 			throw new InterruptedException();
 	}
+	
 
 	public void addObs(Observer obs) {
 		this.obsList.add(obs);

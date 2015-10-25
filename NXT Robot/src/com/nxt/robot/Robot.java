@@ -3,6 +3,7 @@ package com.nxt.robot;
 import lejos.nxt.Button;
 import lejos.nxt.Motor;
 import lejos.nxt.SensorPort;
+import lejos.nxt.LCD;
 
 import java.io.IOException;
 
@@ -39,12 +40,18 @@ public class Robot {
 			do{		
 				motorsDriver();
 				report();
-				stop = Button.ESCAPE.isDown();
+				stop = Button.ESCAPE.isDown() || comm.isClosed();
 			}while(!stop);
-			comm.end();
+			//LCD.drawString("End", 0, 0);
+			if(!comm.isClosed()){
+				comm.end();
+				comm.join();
+			}
 		}
 		catch(NXTCommException e){
 			
+		} 
+		catch (InterruptedException e) {
 		}
 	}
 		
@@ -75,8 +82,9 @@ public class Robot {
 		}
 	}
 
-	public static void main(String[] args) throws IOException, InterruptedException {
-		test();
+	public static void main(String[] args){
+		Robot robot = new Robot();
+		LCD.drawString("End", 0, 1);
 	}
 	
 	public static void test() throws IOException, InterruptedException{

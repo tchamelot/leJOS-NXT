@@ -17,16 +17,17 @@ public class Comm extends Thread implements Observable{
 	private InputStream inStream;
 	private DataOutputStream outStream;
 	private NXTConnection conn;
-	private byte[] inputData = {0, 0, 0, 0, 0, 0, 0, 0};
-	private byte[] outputData = {0, 0, 0, 0, 0, 0, 0, 0};
+	private byte[] inputData = new byte[3];
+	private byte[] outputData = new byte[5];
 	
 	private ArrayList<Observer> obsList = new ArrayList<Observer>();
 	
 	protected volatile boolean running = true;
+	protected boolean closed = false;
 
 	public final static int USB_MODE = 0;
 	public final static int BLUETOOTH_MODE = 1;
-	public final static byte EOC = -1;	
+	public final static byte EOC = -128;	
 		
 	public Comm(int mode)  throws NXTCommException {
 		switch(mode){
@@ -49,15 +50,15 @@ public class Comm extends Thread implements Observable{
 		else{
 			LCD.drawString("Creating streams", 0, 1);
 			inStream = conn.openInputStream();
-			/*inputData[0] = 0;
+			inputData[0] = 0;
 			inputData[1] = 0;
-			inputData[2] = 0;*/
+			inputData[2] = 0;
 			outStream = conn.openDataOutputStream();
-			/*outputData[0] = 0;
+			outputData[0] = 0;
 			outputData[1] = 0;
 			outputData[2] = 0;
 			outputData[3] = 0;
-			outputData[4] = 0;*/
+			outputData[4] = 0;
 			
 			if( confirmation() != true){
 				throw new NXTCommException();
@@ -98,14 +99,14 @@ public class Comm extends Thread implements Observable{
 		return validation;
 	}
 
-	private void readData(){
-		
+	private int readData(){
+		int byteNumber = 0;
 		try{
-			this.inStream.read(inputData);
+			byteNumber = this.inStream.read(inputData);
 		} 
 		catch (IOException e){
 		}
-		
+		return byteNumber;
 	}
 		
 	private void sendData(){
@@ -120,7 +121,12 @@ public class Comm extends Thread implements Observable{
 	public void run(){
 		try {
 			while(running){
-				this.readData();
+				LCD.clear();
+				if(this.readData() == 1){
+					if(inputData[0] == Comm.EOC){
+						this.end();
+					}
+				}
 				isRunning();
 				this.sendData();
 				isRunning();
@@ -131,9 +137,10 @@ public class Comm extends Thread implements Observable{
 			try {
 				outStream.write(Comm.EOC);
 				inStream.close();
-				outStream.close();
+				outStream.close();	
+				USB.usbReset();
+				closed = true;
 				Thread.currentThread().interrupt();
-				
 			} 
 			catch (IOException e1) {
 					
@@ -150,6 +157,10 @@ public class Comm extends Thread implements Observable{
 			throw new InterruptedException();
 	}
 
+	public boolean isClosed(){
+		return closed;
+	}
+	
 	public void addObs(Observer obs) {
 		this.obsList.add(obs);
 	}

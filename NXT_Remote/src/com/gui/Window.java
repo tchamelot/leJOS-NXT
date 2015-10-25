@@ -2,6 +2,8 @@ package com.gui;
 
 import javax.swing.JFrame;
 import java.awt.event.KeyListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
 
@@ -22,7 +24,20 @@ public class Window extends JFrame implements KeyListener{
 		this.setSize(500, 200);
 		this.setResizable(false);
 		this.setLocationRelativeTo(null);
-		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		this.addWindowListener(new WindowAdapter(){
+			public void  windowClosing(WindowEvent e){
+				comm.end();
+				try {
+					comm.join();
+				} 
+				catch (InterruptedException e1) {
+				}
+				finally{
+					e.getWindow().dispose();
+				}
+			}
+		});
 		this.setUndecorated(false);
 
 		this.setContentPane(monitor);
