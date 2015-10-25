@@ -5,7 +5,6 @@ import javax.swing.JLabel;
 import javax.swing.Box;
 import javax.swing.BorderFactory;
 
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 

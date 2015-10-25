@@ -1,14 +1,6 @@
 package com.gui;
 
 import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.JLabel;
-import javax.swing.Box;
-import javax.swing.BorderFactory;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.Color;
-import java.awt.BorderLayout;
 import java.awt.event.KeyListener;
 import java.awt.event.KeyEvent;
 import java.io.IOException;

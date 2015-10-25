@@ -5,7 +5,6 @@ import java.io.DataOutputStream;
 import java.util.ArrayList;
 import java.io.IOException;
 
-import lejos.nxt.Button;
 import lejos.nxt.LCD;
 import lejos.nxt.comm.Bluetooth;
 import lejos.nxt.comm.USB;

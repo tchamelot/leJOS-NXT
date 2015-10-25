@@ -2,7 +2,6 @@ package com.nxt.robot;
 
 import lejos.nxt.Button;
 import lejos.nxt.Motor;
-import lejos.nxt.LCD;
 import lejos.nxt.SensorPort;
 
 import com.nxt.comm.*;
