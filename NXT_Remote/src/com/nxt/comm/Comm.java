@@ -15,10 +15,12 @@ public class Comm extends Thread implements Observable{
 	private OutputStream 	outStream;
 	private byte[] inputData = new byte[5];
 	private byte[] outputData = new byte[3];
+	private int byteRead = 0;
 	
 	private ArrayList<Observer> obsList = new ArrayList<Observer>();
 	
-	protected volatile boolean running = true;
+	private volatile boolean running = true;
+	private boolean closed = false;
 	
 	public final static byte EOC = -128;
 
@@ -33,15 +35,11 @@ public class Comm extends Thread implements Observable{
 		
 		System.out.println("Creating Streams...");
 		inStream  = conn.getInputStream();
-		inputData[0] = 0;
-		inputData[1] = 0;
-		inputData[2] = 0;
-		inputData[3] = 0;
-		inputData[4] = 0;
+		for(int idx = 0; idx < inputData.length; idx++)
+			inputData[idx] = 0;
 		outStream = conn.getOutputStream();
-		outputData[0] = 0;
-		outputData[1] = 0;
-		outputData[2] = 0;
+		for(int idx = 0; idx < outputData.length; idx++)
+		outputData[idx] = 0;
 		
 		if(confirmation() != true){
 			throw new IOException();
@@ -80,67 +78,79 @@ public class Comm extends Thread implements Observable{
 		return validation;
 	}
 
-	private int readData(){
-		int byteNumber = 0;
-		try{
-				byteNumber = this.inStream.read(inputData);
-		} 
-		catch (IOException e){
+	private void readData () throws InterruptedException, IOException{
+		if(running){
+			this.byteRead = this.inStream.read(inputData);
 		}
-		System.out.println("Read " + byteNumber + " bytes");
-		return byteNumber;
+		else
+			throw new InterruptedException();
 	}
 
-	private void sendData(){
-		try{
+	private void sendData() throws InterruptedException, IOException{
+		if(running){
 			this.outStream.write(outputData);
 			this.outStream.flush();
-		} 
-		catch (IOException e){
+		}
+		else
+			throw new InterruptedException();
+		
+	}
+	
+	private void closeStream(){
+		try{
+			outStream.write(Comm.EOC);
+			outStream.flush();
+			outStream.close();
+			inStream.close();
+			System.out.println("Commmunication closed");
+		}
+		catch(IOException e){
+			System.out.print("closeStream IOException");
 		}
 	}
+
 	
 	public void run(){
 		try{
 			while(running){
-				long time = System.currentTimeMillis();
-				System.out.println("Send : " + (System.currentTimeMillis() - time));
 				this.sendData();
-				System.out.println("Read : " + (System.currentTimeMillis() - time));
-				isRunning();
+				this.readData();
 				
-				if(this.readData() == 1)
-					if(inputData[0] == Comm.EOC)
-						this.end();
-				System.out.println("End  : " + (System.currentTimeMillis() - time));
-				isRunning();
+				if(this.byteRead == 1)
+						this.close();
+				
 				this.updateObs();
 			}
 		}
 		catch(InterruptedException e){
-			try {
-				
-				outStream.write(Comm.EOC);
-				inStream.close();
-				outStream.close();
-				System.out.println("Comm thread ended");
-				Thread.currentThread().interrupt();
-			} 
-			catch (IOException e1) {
-				
-			}
+		}
+		catch(IOException e){
+		}
+		finally{
+			closeStream();
+			this.closed = true;
 		}
 	}
-	
-	public void end(){
+		
+	public void close(){
 		this.running = false;
 	}
 	
-	private void isRunning() throws InterruptedException{
-		if(this.running == false)
-			throw new InterruptedException();
+	public void waitForClosure(){
+		this.running = false;
+		while(closed != true){
+			
+		}
 	}
 	
+	public boolean isClosed(){
+		return this.closed;
+	}
+	
+	public boolean isRunning(){
+		return this.running;
+	}
+		
 
 	public void addObs(Observer obs) {
 		this.obsList.add(obs);

@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.io.IOException;
 
 import lejos.nxt.LCD;
+import lejos.nxt.Sound;
 import lejos.nxt.comm.Bluetooth;
 import lejos.nxt.comm.USB;
 import lejos.nxt.comm.NXTConnection;
@@ -19,6 +20,7 @@ public class Comm extends Thread implements Observable{
 	private NXTConnection conn;
 	private byte[] inputData = new byte[3];
 	private byte[] outputData = new byte[5];
+	private int byteRead = 0;
 	
 	private ArrayList<Observer> obsList = new ArrayList<Observer>();
 	
@@ -50,15 +52,11 @@ public class Comm extends Thread implements Observable{
 		else{
 			LCD.drawString("Creating streams", 0, 1);
 			inStream = conn.openInputStream();
-			inputData[0] = 0;
-			inputData[1] = 0;
-			inputData[2] = 0;
+			for(int idx = 0; idx < inputData.length; idx++)
+				inputData[idx] = 0;
 			outStream = conn.openDataOutputStream();
-			outputData[0] = 0;
-			outputData[1] = 0;
-			outputData[2] = 0;
-			outputData[3] = 0;
-			outputData[4] = 0;
+			for(int idx = 0; idx < outputData.length; idx++)
+				outputData[idx] = 0;
 			
 			if( confirmation() != true){
 				throw new NXTCommException();
@@ -66,6 +64,7 @@ public class Comm extends Thread implements Observable{
 			LCD.drawString("Connected", 0, 2);
 			LCD.clear();
 		}
+		Sound.beep();
 	}
 	
 	private boolean confirmation() {
@@ -99,67 +98,77 @@ public class Comm extends Thread implements Observable{
 		return validation;
 	}
 
-	private int readData(){
-		int byteNumber = 0;
-		try{
-			byteNumber = this.inStream.read(inputData);
+	private void readData() throws InterruptedException, IOException{
+		if(running){
+			this.byteRead = this.inStream.read(inputData);
 		} 
-		catch (IOException e){
-		}
-		return byteNumber;
+		else 
+			throw new InterruptedException();
 	}
 		
-	private void sendData(){
-		try{
+	private void sendData() throws InterruptedException, IOException{
+		if(running){
 			this.outStream.write(outputData);
 			this.outStream.flush();
 		} 
-		catch (IOException e){
-		}
+		else
+			throw new InterruptedException();
 	}
 
+	private void closeStream(){
+		try{
+			outStream.write(Comm.EOC);
+			outStream.flush();
+			outStream.close();
+			inStream.close();
+		}
+		catch(IOException e){
+		}
+		Sound.twoBeeps();
+	}
+	
+	
 	public void run(){
 		try {
 			while(running){
-				LCD.clear();
-				if(this.readData() == 1){
-					if(inputData[0] == Comm.EOC){
-						this.end();
-					}
-				}
-				isRunning();
-				this.sendData();
-				isRunning();
+				this.readData();
+				
+				if(this.byteRead == 1)
+						this.close();
+				
 				this.updateObs();
+				this.sendData();
 			}
 		} 
 		catch (InterruptedException e) {
-			try {
-				outStream.write(Comm.EOC);
-				inStream.close();
-				outStream.close();	
-				USB.usbReset();
-				closed = true;
-				Thread.currentThread().interrupt();
-			} 
-			catch (IOException e1) {
-					
-			}
-		}			
+		}
+		catch (IOException e) {
+		}
+		finally{
+			closeStream();
+			closed = true;
+		}
 	}
 	
-	public void end(){
+	public void close(){
 		this.running = false;
 	}
 	
-	private void isRunning() throws InterruptedException{
-		if(this.running == false)
-			throw new InterruptedException();
+	public void waitForClosure(){
+		this.running = false;
+		while(closed != true){
+			
+		}
+	}
+	
+	public boolean isRunning() {
+		return this.running;
 	}
 
 	public boolean isClosed(){
 		return closed;
 	}
+	
 	
 	public void addObs(Observer obs) {
 		this.obsList.add(obs);

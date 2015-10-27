@@ -24,18 +24,13 @@ public class Window extends JFrame implements KeyListener{
 		this.setSize(500, 200);
 		this.setResizable(false);
 		this.setLocationRelativeTo(null);
+		
 		this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		this.addWindowListener(new WindowAdapter(){
 			public void  windowClosing(WindowEvent e){
-				comm.end();
-				try {
-					comm.join();
-				} 
-				catch (InterruptedException e1) {
-				}
-				finally{
-					e.getWindow().dispose();
-				}
+				if(comm != null)
+					comm.waitForClosure();
+				e.getWindow().dispose();
 			}
 		});
 		this.setUndecorated(false);
