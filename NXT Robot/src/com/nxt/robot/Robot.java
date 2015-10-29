@@ -1,7 +1,7 @@
 package com.nxt.robot;
 
 import lejos.nxt.Button;
-import lejos.nxt.LCD;
+import lejos.nxt.ButtonListener;
 import lejos.nxt.Motor;
 import lejos.nxt.SensorPort;
 
@@ -18,38 +18,44 @@ public class Robot {
 	private byte outputData[] = {0, 0, 0, 0, 0};
 	private byte inputData[] = {0, 0, 0};
 	
+	private Thread task;
+	private boolean running = true;
+	
 	public Robot(){
-		boolean stop = false;
 		try{
-			this.comm = new Comm(Comm.USB_MODE);
+			comm = new Comm(Comm.USB_MODE);
 			comm.addObs(new Observer(){
 				public void updateData(byte[] data){
 					inputData = data;
 				}
 			});
-			comm.start();
-
 			motors[0] = new RotationMotor(Motor.B);
 			motors[1] = new TranslationMotor(Motor.A);
 			motors[2] = new ClawMotor(Motor.C);
 			
 			sensor[0] = new PresenceSensor(SensorPort.S1);
 			sensor[1] = new ColorSensor(SensorPort.S2);
-			do{		
-				motorsDriver();
-				report();
-				stop = Button.ESCAPE.isDown() || comm.isClosed();
-			}while(!stop);
+			Button.ESCAPE.addButtonListener(new ButtonListener(){
+				public void buttonPressed(Button b) {
+					running = false;
+				}
+				public void buttonReleased(Button b) {
+					
+				}
+			});
+			task = new Thread(new Task());
 		}
 		catch(NXTCommException e){
 		}
-		finally{
-			if(!comm.isClosed()){
-				comm.waitForClosure();
-			}
-		}
 	}
 		
+	public void start(){
+		if((comm != null) && (task != null)){
+			comm.start();
+			task.start();
+		}
+	}
+	
 	private void report(){
 		for(int idx = 0; idx < motors.length; idx++)
 			outputData[idx] = motors[idx].report();
@@ -76,8 +82,21 @@ public class Robot {
 			}
 		}
 	}
+	
+	private class Task implements Runnable{
+		 public void run(){
+			while(running && (!comm.isClosed())){
+				motorsDriver();
+				report();
+			}
+			if(!comm.isClosed()){
+					comm.waitForClosure();
+				}
+		}
+	}
 
 	public static void main(String[] args){
 		Robot robot = new Robot();
+		robot.start();
 	}
 }
