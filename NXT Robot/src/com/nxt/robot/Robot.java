@@ -23,7 +23,7 @@ public class Robot {
 	
 	public Robot(){
 		try{
-			comm = new Comm(Comm.USB_MODE);
+			comm = new Comm(Comm.BLUETOOTH_MODE);
 			comm.addObs(new Observer(){
 				public void updateData(byte[] data){
 					inputData = data;
